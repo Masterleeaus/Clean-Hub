@@ -8,6 +8,13 @@
 
 </div>
 
+## Product architecture and engineering highlights
+
+A branch-recovery and source-integrity workspace for complex Titan Zero development histories.
+
+- **Architecture:** Its recovery flow scans branches, identifies repeated implementations, builds a recovery plan, replays selected commits, validates the result, and emits review reports.
+- **Distinctive engineering:** The distinctive focus is controlled recovery of valuable work from fragmented branches rather than ordinary feature development.
+
 > **Status: development repository.** This repository contains a substantial Laravel codebase and branch recovery tooling. The repository name is generic, so its relationship to the current Titan Zero platform is documented here to prevent it being mistaken for the canonical product.
 
 ## Purpose
