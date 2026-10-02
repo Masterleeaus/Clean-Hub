@@ -1,3 +1,5 @@
+![Titan Zero Cleaning Platform Recovery Lab — DEVELOPMENT + BRANCH RECOVERY](docs/images/portfolio-banner.svg)
+
 <div align="center">
 
 # Titan Zero Cleaning Platform Recovery Lab
