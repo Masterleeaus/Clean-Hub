@@ -34,4 +34,5 @@ Inspect the repository's Composer manifests and CI workflows before installing o
 
 ## Banner
 
-A project-specific graphic has not yet been added. The centered title serves as the landing header until a verified visual asset is available.
+A checked-in project-specific banner is displayed above.
+
