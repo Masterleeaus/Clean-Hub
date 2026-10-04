@@ -66,10 +66,7 @@ jobs:
           php artisan key:generate --ansi
 
       - name: Code style (Pint)
-        # Known pre-existing debt across ~650 files (app/ and tests/); not yet a
-        # hard gate. Run `vendor/bin/pint` (write mode) to clear it, then drop
-        # continue-on-error once the baseline is clean.
-        continue-on-error: true
+        # Pint is an enforced CI gate; formatting debt must be fixed before merge.
         run: vendor/bin/pint --test
 
       - name: Unit, Feature and Architecture tests
