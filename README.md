@@ -84,7 +84,7 @@ Clean-Hub is a Laravel application with a Node-based frontend toolchain.
 
 ```bash
 composer install --no-interaction --prefer-dist
-copy .env.example .env
+cp .env.example .env
 php artisan key:generate
 php artisan migrate
 npm ci
