@@ -123,14 +123,14 @@ Configure only the AI providers and integrations you intend to use. The checked-
 
 ## Maintenance tooling
 
-The repository includes `.titan/scripts/` for branch inventory, recovery planning, validation, and report generation. Those scripts support repository maintenance around the application; they are not the main product surface. In particular, `replay-commits.js` currently uses a helper that swallows shell errors, so it must not be described as reliable conflict detection or as an automatic merge authority.
+The repository includes `.titan/scripts/` for branch inventory, recovery planning, validation, and report generation. Those scripts support repository maintenance around the application; they are not the main product surface. Their current behavior has important limits: `replay-commits.js` does not check out the supplied recovery branch before cherry-picking, and its shell helper swallows command failures; `validate-merge.js` invokes `npm test` even though the root `package.json` does not define a `test` script. Treat these helpers as maintenance work in progress, not as reliable conflict detection, passing test evidence, or an automatic merge authority.
 
 ## Evidence and boundaries
 
 This README is aligned to the current `main` tip `b7d30b7` and the checked-in application sources reviewed on 2026-10-04. The strongest implemented story is the combination of AI orchestration, provider adapters, WorkCore actions, company context, permissions, confirmation, idempotency, and audit/event recording.
 
-Builds, provider calls, browser flows, external site-builder deployment, and production readiness require verification in an environment with the required dependencies and credentials. This repository does not claim those results from source inspection alone.
+Builds, provider calls, browser flows, external site-builder deployment, and production readiness require verification in an environment with the required dependencies and credentials. The maintenance validator is not a passing test report: its root `npm test` command currently has no matching package script, and the replay helper has the branch/error-handling gaps described above.
 
-## License and attribution
+## Provenance, licensing, and attribution
 
-The repository retains its application licensing and attribution files. Review them and the provenance of imported packages or donor sources before redistribution.
+Clean-Hub contains upstream MagicAI/Laravel application material alongside Titan Zero and WorkCore integration code. Preserve the upstream attribution, license, and notice files carried by the repository and its imported packages; this README does not relicense donor code or claim original authorship for upstream portions. Review the provenance of imported packages and donor sources before redistribution.
