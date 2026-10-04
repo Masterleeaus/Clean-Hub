@@ -22,6 +22,11 @@ New long-form project documentation belongs under `/docs`, not at the repository
 
 ## Start here
 
+Portfolio evidence entry points:
+
+- [Portfolio system architecture](architecture/PORTFOLIO_SYSTEM_OVERVIEW.md)
+- [Portfolio evaluation and current CI evidence](audits/PORTFOLIO_EVALUATION.md)
+
 1. [Agent working agreement](../.titan/docs/AGENTS.md)
 2. [Titan Agent OS](../.titan/README.md)
 3. [Claude Architecture Authority mandate](../.titan/MANDATE.md)
