@@ -8,13 +8,72 @@
 
 </div>
 
+## Overview
+
 Clean-Hub combines an AI interaction layer with a WorkCore domain foundation for customer, property, workforce, scheduling, service, and finance workflows. Its Titan orchestration layer routes requests through registered tools and WorkCore actions, with permissions, explicit confirmations, idempotency, and audit records enforced at the business-action boundary.
 
-## Why it exists
+
+## Measured evidence
+
+Clean-Hub contains a repository-native verifier rather than relying only on README claims.
+
+The checked-in `tools/titan_verify.php` currently defines:
+
+- **10 verification sections**: tenancy, platform, WorkCore, routes, maps, AI, intelligence, creative, UI and release;
+- **98 required-path entries** across those sections;
+- **152 explicit `$check(...)` call sites** in the verifier source, with some checks executed inside loops so runtime check totals can differ.
+
+Run the verifier from the repository root:
+
+```bash
+php tools/titan_verify.php
+```
+
+The verifier checks concrete invariants including:
+
+- request bodies cannot supply authoritative `company_id` to the tenant resolver;
+- company membership participates in context resolution;
+- Vault values are encrypted/decrypted through Laravel Crypt;
+- WorkCore donor/incomplete subsystems remain quarantined;
+- Titan routes require authentication and active company context;
+- WorkCore actions use the governed `BusinessActionDispatcher`;
+- Titan Zero reads use registered WorkCore read models and the shared read executor.
+
+This is structural/runtime-contract verification. It does not establish provider quality, deployed browser behavior or production readiness.
+
+## What is new
+
+Clean-Hub's technical signature is a **single governed business-action boundary shared by AI-assisted and ordinary application writes**.
+
+```text
+Conversation / API request
+        ↓
+TitanZeroOrchestrator
+        ↓
+Registered ToolRouter capability
+        ↓
+BusinessActionDispatcher
+        ↓
+Tenant + operation context
+        ↓
+Entitlement + permission
+        ↓
+Explicit confirmation
+        ↓
+Idempotency replay check
+        ↓
+Database transaction
+        ↓
+Audit + domain events
+```
+
+The important point is that the model does not become a second write authority. Once an AI request wants to change business state, it is forced back through WorkCore's ordinary tenant, permission, confirmation, idempotency and audit controls.
+
+## Product problem
 
 AI assistants become useful in business software when they can understand the active company, retrieve bounded operational data, and hand write operations to the same policies as the rest of the application. Clean-Hub is built around that boundary: conversational requests stay in context, registered tools decide what is available, and WorkCore remains responsible for authorized business changes.
 
-## Product capabilities
+## Verified capabilities
 
 | Capability | Source-backed implementation | Why it matters |
 | --- | --- | --- |
@@ -131,7 +190,7 @@ The repository includes `.titan/scripts/` for branch inventory, recovery plannin
 
 ## Evidence and boundaries
 
-This README is aligned to the current `main` tip `b7d30b7` and the checked-in application sources reviewed on 2026-10-04. The strongest implemented story is the combination of AI orchestration, provider adapters, WorkCore actions, company context, permissions, confirmation, idempotency, and audit/event recording.
+The evidence review for this README was refreshed against pre-edit `main` commit `2597f2ed8edf3113028ac8abc20160b39e545e06` on 2026-10-05. The branch may move after this update, so treat that SHA as an audit snapshot rather than a permanent current-head claim. The strongest implemented story is the combination of AI orchestration, provider adapters, WorkCore actions, company context, permissions, confirmation, idempotency, and audit/event recording.
 
 Builds, provider calls, browser flows, external site-builder deployment, and production readiness require verification in an environment with the required dependencies and credentials. The maintenance validator is not a passing test report: its root `npm test` command currently has no matching package script, and the replay helper has the branch/error-handling gaps described above.
 
