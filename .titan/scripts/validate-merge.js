@@ -105,7 +105,9 @@ function validateMerge(branch) {
     status: 'not_run',
     message: 'No duplicate-class scanner is wired into this validator.',
   });
-  result.overall_status = 'warning';
+  if (result.overall_status !== 'fail') {
+    result.overall_status = 'warning';
+  }
   result.can_merge = false;
   result.issues.push('Duplicate-class check not run');
   console.log(' ⚠️');
@@ -117,7 +119,9 @@ function validateMerge(branch) {
     status: 'not_run',
     message: 'No import-resolution check is wired into this validator.',
   });
-  result.overall_status = 'warning';
+  if (result.overall_status !== 'fail') {
+    result.overall_status = 'warning';
+  }
   result.can_merge = false;
   result.issues.push('Import-resolution check not run');
   console.log(' ⚠️');
@@ -138,7 +142,9 @@ function validateMerge(branch) {
       status: 'warning',
       message: 'The branch is not based on current main; review or rebase before merging.',
     });
+    if (result.overall_status !== 'fail') {
     result.overall_status = 'warning';
+  }
     result.can_merge = false;
     result.issues.push('Branch ancestry requires review');
     console.log(' ⚠️');
@@ -151,7 +157,9 @@ function validateMerge(branch) {
     status: 'not_run',
     message: 'No DI, route, or migration audit is wired into this validator.',
   });
-  result.overall_status = 'warning';
+  if (result.overall_status !== 'fail') {
+    result.overall_status = 'warning';
+  }
   result.can_merge = false;
   result.issues.push('Architecture audit not run');
   console.log(' ⚠️');
