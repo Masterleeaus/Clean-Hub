@@ -20,6 +20,17 @@ Use these terms precisely:
 - **Experimental** — source exists but verification is incomplete.
 - **Planned** — no implementation claim is made.
 
+## Remediation status after the reviewed runs
+
+Several failures described below were subsequently repaired directly on `main`:
+
+- the source verifier now points to `docs/archive/plans/2026-07/titan-zero-chatbot-pwa-upgrade-plan.md`;
+- the source-verifier fixture uses the same canonical archived path;
+- the repository baseline now excludes the deterministic test-only APP keys in `.env.testing` and `.env.verification` while continuing to reject other populated tracked APP keys;
+- the root Vite config no longer imports the Tailwind 4 Vite plugin and now relies on the existing Tailwind 3/PostCSS configuration.
+
+These are code/configuration remediations, not new passing evidence. A fresh workflow run is still required before any of those lanes can be called green.
+
 ## Current executed CI evidence
 
 ### Titan Zero Source Verification — reviewed run #70
