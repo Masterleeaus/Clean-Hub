@@ -9,11 +9,14 @@ const fs = require('fs');
 const path = require('path');
 
 function exec(cmd) {
-  try {
-    return execSync(cmd, { encoding: 'utf-8' }).trim();
-  } catch (e) {
-    return '';
-  }
+  return execSync(cmd, {
+    encoding: 'utf-8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  }).trim();
+}
+
+function formatError(error) {
+  return error.stderr?.toString().trim() || error.message;
 }
 
 function validateMerge(branch) {
@@ -54,7 +57,7 @@ function validateMerge(branch) {
   process.stdout.write('  Building...');
   try {
     exec(`git checkout ${branch}`);
-    exec('npm run build 2>/dev/null || true');
+    exec('npm run build');
     result.checks.push({
       name: 'Builds successfully',
       status: 'pass',
@@ -65,7 +68,7 @@ function validateMerge(branch) {
     result.checks.push({
       name: 'Builds successfully',
       status: 'fail',
-      message: String(err),
+      message: formatError(err),
     });
     result.overall_status = 'fail';
     result.can_merge = false;
@@ -76,7 +79,7 @@ function validateMerge(branch) {
   // Check 3: Tests pass
   process.stdout.write('  Testing...');
   try {
-    exec('npm test 2>/dev/null || true');
+    exec('npm test');
     result.checks.push({
       name: 'Tests pass',
       status: 'pass',
@@ -94,53 +97,63 @@ function validateMerge(branch) {
     console.log(' ⚠️');
   }
 
-  // Check 4: No duplicate classes
+  // Check 4: Duplicate detection is not implemented by this script.
   process.stdout.write('  Checking duplicates...');
   result.checks.push({
     name: 'No duplicate classes',
-    status: 'pass',
-    message: 'No duplicate class definitions found',
+    status: 'not_run',
+    message: 'No duplicate-class scanner is wired into this validator.',
   });
-  console.log(' ✅');
+  result.overall_status = 'warning';
+  result.can_merge = false;
+  result.issues.push('Duplicate-class check not run');
+  console.log(' ⚠️');
 
-  // Check 5: No broken imports
+  // Check 5: Import validation is not implemented by this script.
   process.stdout.write('  Validating imports...');
   result.checks.push({
     name: 'All imports valid',
-    status: 'pass',
-    message: 'All imports resolve correctly',
+    status: 'not_run',
+    message: 'No import-resolution check is wired into this validator.',
   });
-  console.log(' ✅');
+  result.overall_status = 'warning';
+  result.can_merge = false;
+  result.issues.push('Import-resolution check not run');
+  console.log(' ⚠️');
 
-  // Check 6: Mergeable with main
-  process.stdout.write('  Checking merge conflict...');
+  // Check 6: This is an ancestry check, not a full merge-conflict check.
+  process.stdout.write('  Checking branch ancestry...');
   try {
     exec(`git merge-base --is-ancestor main ${branch}`);
     result.checks.push({
-      name: 'Mergeable with main',
+      name: 'Branch contains main',
       status: 'pass',
-      message: 'No merge conflicts expected',
+      message: 'The branch contains the current main history.',
     });
     console.log(' ✅');
   } catch {
     result.checks.push({
-      name: 'Mergeable with main',
+      name: 'Branch contains main',
       status: 'warning',
-      message: 'Potential merge conflicts - may need resolution',
+      message: 'The branch is not based on current main; review or rebase before merging.',
     });
     result.overall_status = 'warning';
-    result.issues.push('Potential merge conflicts');
+    result.can_merge = false;
+    result.issues.push('Branch ancestry requires review');
     console.log(' ⚠️');
   }
 
-  // Check 7: Architecture valid
+  // Check 7: Architecture validation is not implemented by this script.
   process.stdout.write('  Auditing architecture...');
   result.checks.push({
     name: 'Architecture valid',
-    status: 'pass',
-    message: 'DI container, routes, and migrations valid',
+    status: 'not_run',
+    message: 'No DI, route, or migration audit is wired into this validator.',
   });
-  console.log(' ✅');
+  result.overall_status = 'warning';
+  result.can_merge = false;
+  result.issues.push('Architecture audit not run');
+  console.log(' ⚠️');
 
   return result;
 }
@@ -166,7 +179,7 @@ function printResult(result) {
 
   console.log('\nChecks:');
   for (const check of result.checks) {
-    const icon = check.status === 'pass' ? '✅' : check.status === 'warning' ? '⚠️' : '❌';
+    const icon = check.status === 'pass' ? '✅' : check.status === 'warning' || check.status === 'not_run' ? '⚠️' : '❌';
     console.log(`  ${icon} ${check.name}`);
     console.log(`     ${check.message}`);
   }
