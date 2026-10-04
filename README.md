@@ -33,7 +33,24 @@ For the current TypeScript field-service product, see [Titan Zero Field Service 
 
 ## Development
 
-Inspect the repository's Composer manifests and CI workflows before installing or running the application. Use a local environment file and never commit credentials or customer data.
+Inspect the repository's Composer manifests and CI workflows before installing or running the Laravel application. Use a local environment file and never commit credentials or customer data.
+
+### Runnable branch-recovery tooling
+
+The root `package.json` exposes the recovery pipeline as local Node.js commands. They inspect the Git refs available in the checkout and write reports under `.titan/`:
+
+```bash
+npm install
+npm run titan:scan
+npm run titan:detect-duplicates
+npm run titan:plan -- <source-branch>
+npm run titan:validate -- <branch>
+npm run titan:report
+```
+
+The implementation is in [`.titan/scripts/`](.titan/scripts/) and the design/index is [`.titan/README.md`](.titan/README.md). The validator now fails on an unsuccessful build or test command and marks duplicate, import, and architecture checks as `not_run` because those checks are not implemented in that script. Treat its result as review evidence, not an automatic merge approval.
+
+The Laravel application's Composer test and lint scripts are present in [`composer.json`](composer.json), but they were not executed as part of this README change.
 
 ## Portfolio status
 
