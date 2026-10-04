@@ -89,12 +89,13 @@ function validateMerge(branch) {
   } catch (err) {
     result.checks.push({
       name: 'Tests pass',
-      status: 'warning',
-      message: 'Some tests failed - review needed',
+      status: 'fail',
+      message: formatError(err),
     });
-    result.overall_status = 'warning';
+    result.overall_status = 'fail';
+    result.can_merge = false;
     result.issues.push('Test failures detected');
-    console.log(' ⚠️');
+    console.log(' ❌');
   }
 
   // Check 4: Duplicate detection is not implemented by this script.
