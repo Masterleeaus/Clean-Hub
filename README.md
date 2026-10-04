@@ -1,4 +1,4 @@
-![Titan Zero Cleaning Platform Recovery Lab — DEVELOPMENT + BRANCH RECOVERY](docs/images/portfolio-banner.svg)
+![Clean-Hub — Laravel AI business workspace with Titan orchestration and WorkCore-governed business actions](docs/images/clean-hub-banner.svg)
 
 <div align="center">
 
@@ -9,6 +9,10 @@
 </div>
 
 ## Product architecture and engineering highlights
+
+<p align="center">
+  <img src="docs/images/clean-hub-architecture.svg" alt="Clean-Hub governed business-action path from TitanZeroOrchestrator through ToolRouter and WorkCoreActionController to BusinessActionDispatcher, with permission, confirmation, idempotency, and audit boundaries." width="100%" />
+</p>
 
 A branch-recovery and source-integrity workspace for complex Titan Zero development histories.
 
