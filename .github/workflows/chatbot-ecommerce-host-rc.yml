@@ -1,0 +1,222 @@
+name: ChatbotEcommerce Host RC
+
+on:
+  push:
+    branches:
+      - feature/chatbot-ecommerce-v4.9-host-rc
+  pull_request:
+    branches:
+      - main
+    paths:
+      - app/Extensions/ChatbotEcommerce/**
+      - app/Support/TitanZero/TitanZeroFeatureFlags.php
+      - config/titan-zero.php
+      - composer.json
+      - composer.lock
+      - scripts/install_chatbot_ecommerce_overlay.py
+      - transport/chatbot-ecommerce-v4.9.0-overlay.json
+      - tests/contracts/chatbot_ecommerce_host_rc_contract_test.py
+      - .github/workflows/chatbot-ecommerce-host-rc.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: chatbot-ecommerce-host-rc-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+env:
+  APP_ENV: testing
+  APP_DEBUG: "false"
+  APP_KEY: base64:MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=
+  APP_URL: http://localhost
+  DB_CONNECTION: mysql
+  DB_HOST: 127.0.0.1
+  DB_PORT: 3306
+  DB_DATABASE: titan_ecommerce_rc
+  DB_USERNAME: root
+  DB_PASSWORD: root
+  CACHE_DRIVER: array
+  SESSION_DRIVER: array
+  QUEUE_CONNECTION: sync
+  MAIL_MAILER: array
+  TITAN_ZERO_WORKCORE_ENABLED: "true"
+  TITAN_ZERO_CHATBOT_ENABLED: "true"
+  TITAN_ZERO_EXTENSION_DISCOVERY_ENABLED: "true"
+  TITAN_ZERO_EXTENSIONS_ENABLED: chatbot-ecommerce
+  CHATBOT_ECOMMERCE_SESSION_AUTHORITY_SECRET: rc-session-authority-secret-000000000000000000
+  CHATBOT_ECOMMERCE_MARKETPLACE_WRITE_APPROVAL_SECRET: rc-marketplace-approval-secret-000000000000
+  CHATBOT_ECOMMERCE_INTERNAL_PAYMENT_WEBHOOK_SECRET: rc-payment-webhook-secret-00000000000000000
+  CHATBOT_ECOMMERCE_BNPL_STATE_SECRET: rc-bnpl-state-secret-0000000000000000000000
+
+jobs:
+  materialize-test-commit:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: titan_ecommerce_rc
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Configure PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: bcmath, curl, fileinfo, gd, intl, json, mbstring, openssl, pdo, pdo_mysql, sodium, tokenizer, xml, zip
+          tools: composer:v2
+          coverage: none
+
+      - name: Install overlay reader
+        run: python -m pip install --disable-pip-version-check pyarrow
+
+      - name: Install verified ChatbotEcommerce overlay
+        run: |
+          python3 scripts/install_chatbot_ecommerce_overlay.py \
+            --manifest transport/chatbot-ecommerce-v4.9.0-overlay.json \
+            --receipt .titan/reports/chatbot-ecommerce-v4.9.0-host-overlay.json
+
+      - name: Run host RC static contract
+        run: python3 tests/contracts/chatbot_ecommerce_host_rc_contract_test.py
+
+      - name: Validate extension manifests and PHP syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m json.tool app/Extensions/ChatbotEcommerce/extension.json >/dev/null
+          python -m json.tool app/Extensions/ChatbotEcommerce/extension.manifest.json >/dev/null
+          find app/Extensions/ChatbotEcommerce -type f -name '*.php' -print0 \
+            | sort -z \
+            | xargs -0 -n1 php -l >/tmp/chatbot-ecommerce-php-lint.log
+          count=$(wc -l </tmp/chatbot-ecommerce-php-lint.log)
+          test "$count" -eq 393
+          php -l app/Support/TitanZero/TitanZeroFeatureFlags.php
+          php -l config/titan-zero.php
+          echo "PHP linted $count ecommerce files"
+
+      - name: Run all packaged ecommerce regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -d '' scripts < <(find app/Extensions/ChatbotEcommerce/tests -maxdepth 1 -type f -name 'run_*.php' -print0 | sort -z)
+          test "${#scripts[@]}" -eq 38
+          : > /tmp/chatbot-ecommerce-regressions.log
+          for script in "${scripts[@]}"; do
+            echo "=== $script ===" | tee -a /tmp/chatbot-ecommerce-regressions.log
+            php "$script" | tee -a /tmp/chatbot-ecommerce-regressions.log
+          done
+
+      - name: Prepare Laravel host
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp .env.example .env
+          mkdir -p storage/framework/{cache/data,sessions,testing,views} storage/logs bootstrap/cache .titan/reports
+          composer update phpoffice/phpspreadsheet \
+            --with-all-dependencies \
+            --no-interaction \
+            --no-progress \
+            --no-scripts
+          composer validate --no-check-publish --no-interaction
+          composer install --no-interaction --no-progress --prefer-dist --optimize-autoloader
+          php artisan config:clear
+
+      - name: Boot host and migrate full database
+        shell: bash
+        run: |
+          set -euo pipefail
+          php artisan about
+          php artisan migrate:fresh --force
+          php artisan migrate:status > /tmp/chatbot-ecommerce-migrations.log
+          grep -q '2026_08_03_060021_unified_orders_settlements_exception_workbench' /tmp/chatbot-ecommerce-migrations.log
+
+      - name: Verify ecommerce routes, scheduler and lifecycle
+        shell: bash
+        run: |
+          set -euo pipefail
+          php artisan route:list --path=api/v3/chatbot/ecommerce --json > /tmp/chatbot-ecommerce-routes.json
+          python3 - <<'PY'
+          import json
+          routes = json.load(open('/tmp/chatbot-ecommerce-routes.json'))
+          if len(routes) < 40:
+              raise SystemExit(f'Expected at least 40 ecommerce routes, found {len(routes)}')
+          names = [route.get('name') for route in routes if route.get('name')]
+          if len(names) != len(set(names)):
+              raise SystemExit('Duplicate ecommerce route names detected')
+          print(f'Host registered {len(routes)} ecommerce routes')
+          PY
+          php artisan schedule:list > /tmp/chatbot-ecommerce-schedule.log
+          grep -q 'chatbot-ecommerce' /tmp/chatbot-ecommerce-schedule.log
+          php artisan chatbot-ecommerce:lifecycle status
+          php artisan chatbot-ecommerce:lifecycle disable --reason='host RC lifecycle test'
+          php artisan chatbot-ecommerce:lifecycle enable
+          php artisan chatbot-ecommerce:lifecycle status
+
+      - name: Run Laravel-host ecommerce tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          php artisan test app/Extensions/ChatbotEcommerce/tests/Unit --stop-on-failure
+          php artisan test app/Extensions/ChatbotEcommerce/tests/Feature --stop-on-failure
+
+      - name: Write RC evidence report
+        shell: bash
+        run: |
+          set -euo pipefail
+          php_count=$(find app/Extensions/ChatbotEcommerce -type f -name '*.php' | wc -l)
+          file_count=$(find app/Extensions/ChatbotEcommerce -type f | wc -l)
+          route_count=$(python3 -c "import json; print(len(json.load(open('/tmp/chatbot-ecommerce-routes.json'))))")
+          cat > .titan/reports/CHATBOT_ECOMMERCE_V4.9_HOST_RC.md <<EOF
+          # ChatbotEcommerce v4.9.0 Host Release Candidate
+
+          - Host repository: Masterleeaus/clean
+          - Extension path: app/Extensions/ChatbotEcommerce
+          - Extension version: 4.9.0
+          - Packaged files: ${file_count}
+          - PHP files linted: ${php_count}
+          - Packaged regression scripts: 38
+          - Registered ecommerce routes: ${route_count}
+          - Database: MySQL 8.4 fresh migration
+          - Extension discovery: explicit allow-list (`chatbot-ecommerce`)
+          - Composer lock: PhpSpreadsheet reconciled to the declared 5.8+ constraint
+          - Lifecycle disable/enable cycle: passed
+          - Scheduler registration: passed
+          - Laravel unit and feature suites: passed
+
+          ## External limits
+
+          Live Shopify, WooCommerce, marketplace and payment-provider accounts were not supplied to CI. Provider boundaries are covered by packaged fixtures and failure-path tests; live account certification remains environment-specific.
+          EOF
+
+      - name: Commit materialized extension and evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "Titan Zero CI"
+          git config user.email "actions@users.noreply.github.com"
+          git add composer.lock app/Extensions/ChatbotEcommerce .titan/reports/chatbot-ecommerce-v4.9.0-host-overlay.json .titan/reports/CHATBOT_ECOMMERCE_V4.9_HOST_RC.md
+          if git diff --cached --quiet; then
+            echo "No materialized ecommerce changes to commit"
+          else
+            git commit -m "feat: install verified ChatbotEcommerce v4.9.0 in host"
+            git push origin HEAD:${{ github.head_ref || github.ref_name }}
+          fi

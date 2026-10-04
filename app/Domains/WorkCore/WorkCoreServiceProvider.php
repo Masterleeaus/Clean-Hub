@@ -39,7 +39,7 @@ use App\Domains\WorkCore\System\Donors\{DonorSourceRegistry, FeatureSourceRegist
 use App\Domains\WorkCore\System\Host\Contracts\{MenuAdapterContract, NotificationAdapterContract, StorageAdapterContract, ToolBridgeContract};
 use App\Domains\WorkCore\System\Host\{EventNotificationAdapter, LaravelPrivateStorageAdapter, NullMenuAdapter, WorkCoreToolBridge};
 use App\Domains\WorkCore\System\Notifications\NotificationDispatcherContract;
-use App\Domains\WorkCore\System\Outbox\{DatabaseOutboxPublisher, OutboxPublisherContract, OutboxTransportContract};
+use App\Domains\WorkCore\System\Outbox\{DatabaseOutboxPublisher, NullOutboxTransport, OutboxPublisherContract, OutboxTransportContract};
 use App\Domains\WorkCore\System\ReadModels\ReadModelRegistry;
 use App\Domains\WorkCore\System\References\RecordTypeRegistry;
 use App\Domains\WorkCore\System\Registry\WorkModuleRegistry;
@@ -88,7 +88,7 @@ final class WorkCoreServiceProvider extends ServiceProvider
         $this->bindConfigured(TenantResolverContract::class, 'workcore.tenant_resolver');
         $this->bindConfigured(PermissionResolverContract::class, 'workcore.permission_resolver');
         $this->bindConfigured(EntitlementResolverContract::class, 'workcore.entitlement_resolver');
-        $this->bindConfigured(OutboxTransportContract::class, 'workcore.outbox.transport');
+        $this->bindConfigured(OutboxTransportContract::class, 'workcore.outbox.transport', NullOutboxTransport::class);
 
         $this->app->singleton(BusinessActionRegistry::class);
         $this->app->singleton(ReadModelRegistry::class);
@@ -170,9 +170,9 @@ final class WorkCoreServiceProvider extends ServiceProvider
         $this->publishes($publishes, 'workcore-config');
     }
 
-    private function bindConfigured(string $contract, string $configKey): void
+    private function bindConfigured(string $contract, string $configKey, ?string $default = null): void
     {
-        $implementation = config($configKey);
+        $implementation = config($configKey, $default);
         if (! is_string($implementation) || $implementation === '' || ! class_exists($implementation)) {
             throw new RuntimeException("Invalid WorkCore binding [{$configKey}].");
         }

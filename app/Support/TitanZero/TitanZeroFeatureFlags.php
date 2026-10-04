@@ -8,6 +8,7 @@ final readonly class TitanZeroFeatureFlags
 {
     private const WORKCORE_PROVIDER = 'App\\Domains\\WorkCore\\WorkCoreServiceProvider';
     private const CHATBOT_PROVIDER = 'App\\Extensions\\Chatbot\\System\\ChatbotServiceProvider';
+    private const EXTENSION_PROVIDER = 'App\\Providers\\ExtensionServiceProvider';
 
     private function __construct(
         private bool $workcoreEnabled,
@@ -59,6 +60,10 @@ final readonly class TitanZeroFeatureFlags
 
         if ($this->chatbotEnabled) {
             $providers[] = self::CHATBOT_PROVIDER;
+        }
+
+        if ($this->extensionDiscoveryEnabled) {
+            $providers[] = self::EXTENSION_PROVIDER;
         }
 
         return $providers;
