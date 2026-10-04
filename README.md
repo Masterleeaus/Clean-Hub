@@ -64,11 +64,11 @@ The first screen intentionally separates source evidence from runtime claims.
 
 The latest reviewed PR evidence identified concrete failures:
 
-- missing `TITAN_ZERO_CHATBOT_PWA_UPGRADE_PLAN.md` in the source-verification contract
-- tracked populated test APP keys in `.env.testing` and `.env.verification`
-- `composer.lock` does not satisfy the current `phpoffice/phpspreadsheet ^5.8` constraint
-- frontend build cannot resolve `@tailwindcss/vite`
-- Titan architecture verification reports **15 remaining failures**
+- source-verifier plan-path drift was repaired on `main`; the next CI run must confirm the canonical archived plan path
+- the baseline now explicitly permits deterministic `.env.testing` / `.env.verification` APP keys while still rejecting production-style tracked keys
+- `composer.lock` still does not satisfy the current `phpoffice/phpspreadsheet ^5.8` constraint
+- the root Vite config was realigned to the existing Tailwind 3/PostCSS stack; the next CI run must confirm the frontend build
+- Titan architecture verification still reports **15 remaining failures** in the last executed run
 
 These are repository facts, not hidden caveats.
 
@@ -445,11 +445,11 @@ Detailed methodology: [docs/audits/PORTFOLIO_EVALUATION.md](docs/audits/PORTFOLI
 
 2. **Composer metadata is inconsistent.** The current lock file contains `phpoffice/phpspreadsheet 4.5.0`, which does not satisfy the root `^5.8` constraint.
 
-3. **The frontend build is missing `@tailwindcss/vite` from the installed dependency graph.**
+3. **The previous frontend build failure was caused by a Tailwind 4 Vite plugin import in a Tailwind 3/PostCSS project.** The root Vite config has been corrected on `main`; a fresh CI run is still required.
 
-4. **The source-verification workflow references a missing historical upgrade-plan file.**
+4. **The source-verification workflow previously referenced a missing root-level historical plan.** It now targets the canonical archived plan path; a fresh CI run is still required.
 
-5. **Two tracked test environment files contain populated placeholder APP keys**, which the repository baseline correctly rejects.
+5. **The deterministic test APP keys are intentional fixtures.** The baseline rule now excludes `.env.testing` and `.env.verification` while continuing to reject other tracked populated APP keys.
 
 6. **Titan architecture verification still has 15 failures**, including unresolved WorkCore module wiring, route/company-scope checks and missing gitignore protections.
 
