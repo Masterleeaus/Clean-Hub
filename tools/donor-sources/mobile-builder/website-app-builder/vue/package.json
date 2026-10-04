@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "@mdi/font": "7.0.96",
-    "axios": "^1.6.7",
+    "axios": "^1.20.0",
     "chart.js": "^4.4.1",
     "roboto-fontface": "*",
     "snack-sdk": "^6.5.1",
@@ -25,7 +25,7 @@
     "sass": "^1.69.0",
     "unplugin-fonts": "^1.1.0",
     "unplugin-vue-components": "^0.26.0",
-    "vite": "^7.1.7",
+    "vite": "^7.3.6",
     "vite-plugin-vuetify": "^2.0.0"
   },
   "optionalDependencies": {
