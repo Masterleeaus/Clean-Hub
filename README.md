@@ -1,124 +1,136 @@
-![Clean-Hub — branch recovery and source integrity](docs/images/portfolio-banner.svg)
+![Clean-Hub — AI business workspace and WorkCore operations](docs/images/portfolio-banner.svg)
 
 <div align="center">
 
 # Clean-Hub
 
-**A branch-recovery and source-integrity workbench for bringing valuable changes back into a coherent codebase.**
+**A Laravel-based AI business workspace that brings conversational assistance and operational workflows into one company-scoped application.**
 
 </div>
 
-Clean-Hub gives maintainers a practical way to understand a busy Git repository, choose which work is worth recovering, replay it on a controlled branch, and leave behind an inspectable record of what happened. It is especially useful when parallel feature work, generated changes, or AI-assisted development have produced more branches than the team can safely integrate by hand.
+Clean-Hub combines an AI interaction layer with a WorkCore domain foundation for customer, property, workforce, scheduling, service, and finance workflows. Its Titan orchestration layer routes requests through registered tools and WorkCore actions, with permissions, explicit confirmations, idempotency, and audit records enforced at the business-action boundary.
 
 ## Why it exists
 
-Recovering a branch is rarely just a merge command. The maintainer needs to know how far the branch has diverged, which commits and files are unique, what conflicts are likely, and whether the recovered result still builds and tests. Clean-Hub turns that decision into a staged workflow with small JSON and Markdown artifacts that can be reviewed, shared, and regenerated.
+AI assistants become useful in business software when they can understand the active company, retrieve bounded operational data, and hand write operations to the same policies as the rest of the application. Clean-Hub is built around that boundary: conversational requests stay in context, registered tools decide what is available, and WorkCore remains responsible for authorized business changes.
 
-**Best fit:** engineering teams maintaining a Laravel application with a large branch surface, or developers building operational tooling for AI-heavy, multi-branch workflows.
+## Product capabilities
 
-## What the system does
-
-Clean-Hub is a Laravel codebase with a focused Node.js recovery toolkit exposed through the root `package.json`.
-
-| Capability | Implementation | Value to a maintainer |
+| Capability | Source-backed implementation | Why it matters |
 | --- | --- | --- |
-| Branch inventory | [`.titan/scripts/scan-branches.js`](.titan/scripts/scan-branches.js) compares every local branch with `main` and records ahead/behind counts, unique commits, changed files, author, and last-modified date. | Makes recovery candidates visible before anyone starts cherry-picking. |
-| Recovery planning | [`.titan/scripts/plan-recovery.js`](.titan/scripts/plan-recovery.js) creates a `recovery/<branch>` plan with commits to replay, build/test steps, audit checks, and a risk assessment. | Converts an ambiguous branch into a reviewable sequence of decisions. |
-| Conflict-aware replay | [`.titan/scripts/replay-commits.js`](.titan/scripts/replay-commits.js) replays commits in order, counts successful and failed picks, records conflicts, and aborts a conflicted cherry-pick for manual review. | Preserves an explicit audit trail instead of hiding integration problems. |
-| Merge validation | [`.titan/scripts/validate-merge.js`](.titan/scripts/validate-merge.js) checks branch existence, runs `npm run build` and `npm test`, verifies `main` ancestry, and records whether the result is safe to continue reviewing. | Separates a technically passing build from a branch that still needs architectural review. |
-| Review reports | [`.titan/scripts/generate-reports.js`](.titan/scripts/generate-reports.js) turns the branch registry into summary and branch-health Markdown reports. | Gives reviewers a concise operational view without opening every generated JSON file. |
+| Conversational AI | [`TitanZeroOrchestrator`](app/Titan/AI/TitanZeroOrchestrator.php) builds conversation context, asks the configured assistant for a response, and accepts only a strict JSON tool envelope when a business action is requested. | Keeps ordinary conversation separate from executable operations and gives the application one controlled AI persona. |
+| Multi-provider completion | [`AiCompletionService`](app/Services/Ai/AiCompletionService.php) routes text and image-aware completion through the configured engine, including OpenAI, Anthropic, Gemini, DeepSeek, and xAI adapters. | Makes provider choice an application concern instead of coupling every feature to one SDK. |
+| Tool and action routing | [`ToolRouter`](app/Titan/AI/ToolRouter.php) resolves registered capabilities, WorkCore actions, and read models under the active company context. It rejects tenant overrides, checks permissions, and records success or failure. | Gives AI tool use the same tenancy and audit boundary as direct application requests. |
+| Transactional business actions | [`BusinessActionDispatcher`](app/Domains/WorkCore/System/Actions/BusinessActionDispatcher.php) checks tenant and operation context, entitlements, permissions, and explicit confirmation before running an idempotent transaction with audit and domain-event recording. | Makes high-impact AI-assisted writes reviewable, repeatable, and policy-aware. |
+| Operational foundation | [`WorkCoreServiceProvider`](app/Domains/WorkCore/WorkCoreServiceProvider.php) registers capabilities, actions, read models, tenancy, authorization, outbox, notifications, and operational modules. | Separates the business-action kernel from individual vertical workflows. |
+| Declarative interactions | [`interactions/ai_assisted.json`](interactions/ai_assisted.json) defines an AI-assisted quote wizard; [`interactions/new_customer.json`](interactions/new_customer.json) defines a permissioned CRM customer wizard. | Keeps interaction questions, validation, permissions, and capability names inspectable as data. |
 
-## Architecture at a glance
+## Architecture
 
 ```text
-Local Git refs
-    │
-    ▼
-scan-branches.js ──► .titan/registry/branches.json
-    │
-    ▼
-plan-recovery.js ──► .titan/recovery/<branch>.json
-    │
-    ▼
-replay-commits.js ─► .titan/recovery/replay.json
-    │
-    ▼
-validate-merge.js ─► .titan/audits/validation-<branch>.json
-    │
-    ▼
-generate-reports.js ► .titan/reports/summary.md
-                         .titan/reports/branch-health.md
+Conversation or API request
+          │
+          ▼
+TitanZeroOrchestrator
+          │  strict tool envelope
+          ▼
+ToolRouter ───────────────► registered capability / read model
+          │
+          ▼
+BusinessActionDispatcher
+          │
+          ├─ active company + operation context
+          ├─ entitlement + permission checks
+          ├─ explicit confirmation
+          ├─ idempotency replay protection
+          └─ transaction → handler → audit + domain events
 ```
 
-The design keeps the recovery state in repository-local artifacts rather than a hidden service. That makes the workflow easy to inspect in code review and gives each phase a clear handoff: inventory, plan, replay, validate, report.
+The public WorkCore route group is defined in [`app/Domains/WorkCore/Routes/api.php`](app/Domains/WorkCore/Routes/api.php). The operational provider loads the registered `operations`, `scheduling`, `dispatch`, `recurring`, `forms`, `repairs`, and `fleet` module groups. [`vertical_operations.php`](app/Domains/WorkCore/Config/vertical_operations.php) defines cleaning, pressure-washing, gardening, handyman, and plumbing service vocabularies with durations, tasks, skills, forms, and compliance metadata.
 
-## Engineering choices
+Those configuration and module surfaces provide the domain model and integration points; they are not by themselves a claim that every vertical is fully enabled end to end. Follow the enabled routes, migrations, handlers, and tests for the workflow you want to run.
 
-- **Git is the source of truth.** The scanner derives branch state from the checkout instead of maintaining a second branch database.
-- **Recovery is explicit.** Plans name the source branch, recovery branch, commits to replay, expected build/test commands, and risk fields before integration begins.
-- **Conflicts stay visible.** A conflicted cherry-pick is aborted and recorded for manual resolution; the tool does not silently manufacture a merged result.
-- **Validation is honest about coverage.** Build, test, and ancestry checks can fail the validator. Duplicate-class, import-resolution, and architecture checks are recorded as `not_run` when this script does not implement them, so a green build is not presented as a full merge certification.
-- **Outputs are reviewable.** JSON registries support automation while Markdown reports provide a human-friendly handoff.
+## AI request surfaces
+
+The authenticated API exposes distinct paths for conversational and generation workflows in [`routes/api.php`](routes/api.php):
+
+- `aichat` for conversations, templates, history, search, and streamed responses.
+- `airealtimechat` for realtime conversations, websocket credentials, and conversation persistence.
+- `aiwriter` for generator metadata, streamed text output, saving, and favourites.
+- `aiimage` for model versions, availability checks, image generation, and recent images.
+- `aivoiceover` for text-to-speech preview and generation.
+- `v1/shared-credit` for company-scoped usage and cost visibility.
+
+These routes sit behind the application authentication boundary. Provider keys and account configuration belong in the environment, never in source control.
+
+## Optional AI site-builder bridge
+
+The repository also contains a separately deployable AI site-builder bridge under [`integrations/ai-site-builder/`](integrations/ai-site-builder/). Its design keeps MagicAI/Titan Zero responsible for identity, active-company context, permissions, launch sessions, correlations, and audit records while the external React/Vite/Supabase builder owns generated projects and build artifacts.
+
+The bridge documents HMAC signing, nonce replay protection, one-use launch sessions, idempotent callbacks, company-scoped identifiers, and secret-file sanitisation. It is an isolated integration surface and must be populated, configured, and tested independently before being described as a deployed product capability.
 
 ## Quickstart
 
-The recovery toolkit runs locally against the branches available in your checkout.
+Clean-Hub is a Laravel application with a Node-based frontend toolchain.
 
 ### Prerequisites
 
-- Node.js 18 or newer
-- npm
-- Git with the branches you want to inspect
+- PHP 8.2 or newer
+- Composer
+- Node.js and npm
+- A database supported by the Laravel configuration
 
-### Run the recovery workflow
+### Install and build
 
 ```bash
+composer install --no-interaction --prefer-dist
+copy .env.example .env
+php artisan key:generate
+php artisan migrate
 npm ci
-
-# Inventory local branches and write .titan/registry/branches.json
-npm run titan:scan
-
-# Create summary and branch-health reports
-npm run titan:report
-
-# Generate the current duplicate-report artifact
-npm run titan:detect-duplicates
-
-# Create a plan for a branch identified by the scan
-npm run titan:plan -- feature/branch-name
-
-# Validate a recovery branch after replaying its commits
-npm run titan:validate -- recovery/branch-name
+npm run build
 ```
 
-The commands write generated state beneath `.titan/registry/`, `.titan/recovery/`, `.titan/audits/`, and `.titan/reports/`. Run them from a disposable or review branch when you want to keep generated artifacts separate from application work.
+Run the application with the Laravel environment appropriate to your host. The root Composer manifest defines `test` and `test:lint`; the root `package.json` defines `build`, `dev`, and frontend maintenance scripts.
 
-### Laravel application
+```bash
+composer test
+composer test:lint
+```
 
-The repository also contains a substantial Laravel application. Its Composer manifest defines the application dependencies and the `test` and `test:lint` scripts; the recovery toolkit itself only requires the Node.js setup above. For application work, use the repository's normal environment configuration and CI workflow after installing Composer dependencies.
+Configure only the AI providers and integrations you intend to use. The checked-in [`.env.example`](.env.example) is the starting point for local configuration.
 
 ## Repository map
 
 | Path | Role |
 | --- | --- |
-| [`.titan/scripts/`](.titan/scripts/) | Executable branch scan, planning, replay, validation, and report stages. |
-| [`.titan/README.md`](.titan/README.md) | Detailed recovery-tool documentation and command index. |
-| [`.titan/registry/`](.titan/registry/) | Branch and duplicate-report artifacts produced by the workflow. |
-| [`.titan/recovery/`](.titan/recovery/) | Recovery plans and replay results. |
-| [`.titan/audits/`](.titan/audits/) | Validation outputs. |
-| [`.titan/reports/`](.titan/reports/) | Human-readable summaries. |
-| [`app/`](app/) | Laravel application code and domain services. |
-| [`.github/workflows/`](.github/workflows/) | Laravel and Titan recovery automation. |
-| [`TITAN_SYSTEM_IMPLEMENTATION_SUMMARY.md`](TITAN_SYSTEM_IMPLEMENTATION_SUMMARY.md) | Historical implementation map with the checked-in scope and workflow descriptions. |
+| [`app/Titan/AI/`](app/Titan/AI/) | Titan Zero orchestration, context building, and tool routing. |
+| [`app/Services/Ai/`](app/Services/Ai/) | Provider-aware text and image completion services. |
+| [`app/Domains/WorkCore/`](app/Domains/WorkCore/) | Company context, capabilities, actions, read models, modules, events, outbox, and operational routes. |
+| [`routes/api.php`](routes/api.php) | Authenticated AI, image, voice, usage, and application API surfaces. |
+| [`interactions/`](interactions/) | Declarative interaction specifications for AI-assisted and CRM workflows. |
+| [`integrations/ai-site-builder/`](integrations/ai-site-builder/) | Isolated site-builder bridge design, installer, patches, and security contract. |
+| [`.github/workflows/`](.github/workflows/) | Laravel, architecture, recovery, and integration automation. |
+| [`tests/`](tests/) | Application and domain verification suites. |
 
-## Evidence and current scope
+## Engineering decisions
 
-At the current `main` tip (`b7d30b7`, reviewed 2026-10-04), the repository contains executable implementations for branch scanning, recovery planning, commit replay, build/test/ancestry validation, and report generation. The README links each headline capability to its source file so the portfolio story can be checked against the implementation.
+- **One business-action boundary:** AI calls do not write directly to arbitrary tables; registered actions pass through WorkCore policy and transaction handling.
+- **Company context is explicit:** tool input cannot override the active company, and WorkCore validates both tenant and operation context.
+- **Safe retries are designed in:** idempotency records, correlation IDs, audit records, and domain events are part of the action dispatcher contract.
+- **Provider adapters stay behind services:** application features ask for completion while the service selects the configured engine and model.
+- **Integration ownership is separated:** the optional site-builder bridge cannot become a second authority for WorkCore business records.
 
-The duplicate detector currently emits a baseline report with zero detected sets and follow-up recommendations; it is a reporting contract, not proof that semantic duplicate analysis has been completed. The merge validator likewise marks duplicate, import, and architecture checks as `not_run` when they are outside its implemented scope. Those boundaries are intentional: Clean-Hub is strongest as a traceable recovery workflow and integration aid, not as an autonomous merge authority.
+## Maintenance tooling
 
-Clean-Hub is supporting infrastructure for disciplined AI-assisted development workflows. It does not claim to be an LLM runtime or to make merge decisions without human review.
+The repository includes `.titan/scripts/` for branch inventory, recovery planning, validation, and report generation. Those scripts support repository maintenance around the application; they are not the main product surface. In particular, `replay-commits.js` currently uses a helper that swallows shell errors, so it must not be described as reliable conflict detection or as an automatic merge authority.
+
+## Evidence and boundaries
+
+This README is aligned to the current `main` tip `b7d30b7` and the checked-in application sources reviewed on 2026-10-04. The strongest implemented story is the combination of AI orchestration, provider adapters, WorkCore actions, company context, permissions, confirmation, idempotency, and audit/event recording.
+
+Builds, provider calls, browser flows, external site-builder deployment, and production readiness require verification in an environment with the required dependencies and credentials. This repository does not claim those results from source inspection alone.
 
 ## License and attribution
 
-The application retains its repository-level licensing and attribution files. Review those files before redistributing application code or generated recovery artifacts.
+The repository retains its application licensing and attribution files. Review them and the provenance of imported packages or donor sources before redistribution.
