@@ -21,7 +21,7 @@ class TitanZeroSourceVerificationTest(unittest.TestCase):
             "packages/titanzero/interaction-engine/src/Providers/InteractionServiceProvider.php",
             "app/Extensions/Chatbot/extension.json",
             "app/Extensions/Chatbot/System/ChatbotServiceProvider.php",
-            "TITAN_ZERO_CHATBOT_PWA_UPGRADE_PLAN.md",
+            "docs/archive/plans/2026-07/titan-zero-chatbot-pwa-upgrade-plan.md",
         ]
         for relative in required:
             path = root / relative
