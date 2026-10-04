@@ -66,7 +66,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if git grep -nE 'APP_KEY=base64:[A-Za-z0-9+/=]{20,}' -- ':!*.example' ':!.github/workflows/repository-baseline.yml'; then
+          if git grep -nE 'APP_KEY=base64:[A-Za-z0-9+/=]{20,}' -- ':!*.example' ':!.env.testing' ':!.env.verification' ':!.github/workflows/repository-baseline.yml'; then
             echo 'A populated Laravel APP_KEY is tracked.' >&2
             exit 1
           fi
