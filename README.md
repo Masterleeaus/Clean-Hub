@@ -1,4 +1,4 @@
-![Clean-Hub — AI business workspace and WorkCore operations](docs/images/portfolio-banner.svg)
+![Clean-Hub — Laravel AI business workspace with Titan orchestration and WorkCore-governed business actions](docs/images/clean-hub-banner.svg)
 
 <div align="center">
 
@@ -24,6 +24,10 @@ AI assistants become useful in business software when they can understand the ac
 | Transactional business actions | [`BusinessActionDispatcher`](app/Domains/WorkCore/System/Actions/BusinessActionDispatcher.php) checks tenant and operation context, entitlements, permissions, and explicit confirmation before running an idempotent transaction with audit and domain-event recording. | Makes high-impact AI-assisted writes reviewable, repeatable, and policy-aware. |
 | Operational foundation | [`WorkCoreServiceProvider`](app/Domains/WorkCore/WorkCoreServiceProvider.php) registers capabilities, actions, read models, tenancy, authorization, outbox, notifications, and operational modules. | Separates the business-action kernel from individual vertical workflows. |
 | Declarative interactions | [`interactions/ai_assisted.json`](interactions/ai_assisted.json) defines an AI-assisted quote wizard; [`interactions/new_customer.json`](interactions/new_customer.json) defines a permissioned CRM customer wizard. | Keeps interaction questions, validation, permissions, and capability names inspectable as data. |
+
+<p align="center">
+  <img src="docs/images/clean-hub-architecture.svg" alt="Clean-Hub governed business-action path from TitanZeroOrchestrator through ToolRouter and WorkCoreActionController to BusinessActionDispatcher, with permission, confirmation, idempotency, and audit boundaries." width="100%" />
+</p>
 
 ## Architecture
 
