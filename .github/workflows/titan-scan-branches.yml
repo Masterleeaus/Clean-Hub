@@ -44,14 +44,14 @@ jobs:
         continue-on-error: true
 
       - name: Upload registry
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: titan-registry
           path: .titan/registry/
           retention-days: 90
 
       - name: Upload reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: titan-reports
           path: .titan/reports/
